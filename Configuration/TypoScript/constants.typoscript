@@ -1,0 +1,14 @@
+## Custom Sub-Categories
+# customsubcategory=newt4dce_list=LLL:EXT:newt4dce/Resources/Private/Language/locallang_db.xlf:configuration_customSubCategories_list
+
+plugin.tx_newt4dce {
+  settings {
+    list {
+      # cat=plugin.tx_newt4dce/newt4dce_list/010; type=string; label=Order field for news-list (valid field from news)
+      orderField = uid
+      # cat=plugin.tx_newt4dce/newt4dce_list/020; type=options[asc,desc]; label=Order direction for news-list (asc desc)
+      orderDirection = desc
+    }
+  }
+}
+

@@ -1,0 +1,8 @@
+plugin.tx_newt4dce {
+  settings {
+    list {
+      orderField = {$plugin.tx_newt4dce.settings.list.orderField}
+      orderDirection = {$plugin.tx_newt4dce.settings.list.orderDirection}
+    }
+  }
+}
