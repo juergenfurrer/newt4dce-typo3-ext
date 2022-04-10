@@ -10,18 +10,25 @@ use Infonique\Newt\NewtApi\FieldItem;
 use Infonique\Newt\NewtApi\FieldType;
 use Infonique\Newt\NewtApi\FieldValidation;
 use Infonique\Newt\NewtApi\Item;
+use Infonique\Newt\NewtApi\ItemValue;
 use Infonique\Newt\NewtApi\MethodCreateModel;
 use Infonique\Newt\NewtApi\MethodDeleteModel;
 use Infonique\Newt\NewtApi\MethodListModel;
 use Infonique\Newt\NewtApi\MethodReadModel;
 use Infonique\Newt\NewtApi\MethodType;
 use Infonique\Newt\NewtApi\MethodUpdateModel;
+use T3\Dce\Components\ContentElementGenerator\InputDatabase;
 use T3\Dce\Domain\Model\Dce;
 use T3\Dce\Domain\Model\DceField;
 use T3\Dce\Domain\Repository\DceFieldRepository;
 use T3\Dce\Domain\Repository\DceRepository;
+use T3\Dce\Utility\DatabaseUtility;
+use T3\Dce\Utility\FlexformService;
 use T3\Dce\Utility\TypoScript;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
+use TYPO3\CMS\Core\Configuration\FlexForm\FlexFormTools;
+use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Configuration\ConfigurationManager;
 use TYPO3\CMS\Extbase\Configuration\ConfigurationManagerInterface;
@@ -35,6 +42,8 @@ class DceEndpoint implements EndpointInterface
 
     // TODO: From where should we take this?
     private string $pluginName = 'test';
+    private string $fieldTitle = 'text';
+    private string $fieldDescription = 'textarea';
 
     private DceRepository $dceRepository;
     private DceFieldRepository $dceFieldRepository;
@@ -74,9 +83,23 @@ class DceEndpoint implements EndpointInterface
             return $item;
         }
 
-        $params = $model->getParams();
+        $pid = $model->getPageUid();
+        $flexForm = $this->getFlexformFromParams($model->getParams());
 
-        return $item;
+        $tableName = 'tt_content';
+        $connection = DatabaseUtility::getConnectionPool()->getConnectionForTable($tableName);
+        $id = $connection->insert(
+            $tableName,
+            [
+                'pid' => $pid,
+                'CType' => 'dce_' . $this->pluginName,
+                'tstamp' => time(),
+                'crdate' => time(),
+                'pi_flexform' => $flexForm,
+            ]
+        );
+
+        return $this->getItemByFlexform($id, $flexForm);
     }
 
     /**
@@ -90,7 +113,33 @@ class DceEndpoint implements EndpointInterface
         $id = $model->getReadId();
 
         $item = new Item();
-        $item->setId($id);
+
+        $tableName = 'tt_content';
+        /** @var QueryBuilder */
+        $queryBuilder = DatabaseUtility::getConnectionPool()->getQueryBuilderForTable($tableName);
+        $queryBuilder->getRestrictions()->removeAll();
+        $records = $queryBuilder
+            ->select('*')
+            ->from($tableName)
+            ->where(
+                $queryBuilder->expr()->eq(
+                    'uid',
+                    $queryBuilder->createNamedParameter($id, \PDO::PARAM_INT)
+                )
+            )
+            ->execute()
+            ->fetchAll();
+
+        if (count($records) > 0) {
+            $record = $records[0];
+            $item->setId(strval($record['uid']));
+            $flexformData = FlexformService::get()->convertFlexFormContentToArray($record['pi_flexform'], 'lDEF', 'vDEF');
+            if (isset($flexformData['settings']) && is_countable($flexformData['settings'])) {
+                foreach ($flexformData['settings'] as $key => $val) {
+                    $item->addValue(new ItemValue($key, $val));
+                }
+            }
+        }
 
         return $item;
     }
@@ -108,10 +157,23 @@ class DceEndpoint implements EndpointInterface
             return $item;
         }
 
-        $params = $model->getParams();
         $id = intval($model->getUpdateId());
+        $flexForm = $this->getFlexformFromParams($model->getParams());
 
-        return $item;
+        $tableName = 'tt_content';
+        $connection = DatabaseUtility::getConnectionPool()->getConnectionForTable($tableName);
+        $connection->update(
+            $tableName,
+            [
+                'tstamp' => time(),
+                'pi_flexform' => $flexForm,
+            ],
+            [
+                'uid' => intval($id),
+            ]
+        );
+
+        return $this->getItemByFlexform($id, $flexForm);
     }
 
     /**
@@ -123,11 +185,13 @@ class DceEndpoint implements EndpointInterface
     public function methodDelete(MethodDeleteModel $model): bool
     {
         try {
+            $tableName = 'tt_content';
             $id = intval($model->getDeleteId());
-            // $news = $this->newsRepository->findByUid($id);
-            // $this->newsRepository->remove($news);
-
-            // persist the item
+            GeneralUtility::makeInstance(ConnectionPool::class)->getConnectionForTable($tableName)->update(
+                $tableName,
+                ['deleted' => '1'],
+                ['uid' => $id]
+            );
             $this->persistenceManager->persistAll();
         } catch (\Throwable $th) {
             return false;
@@ -145,6 +209,28 @@ class DceEndpoint implements EndpointInterface
     public function methodList(MethodListModel $model): array
     {
         $items = [];
+        $pid = $model->getPageUid();
+        if ($pid > 0) {
+            $tableName = 'tt_content';
+            /** @var QueryBuilder */
+            $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable($tableName);
+            $queryBuilder->getRestrictions()->removeAll();
+            $recordRows = $queryBuilder
+                ->select('uid', 'pi_flexform')
+                ->from($tableName)
+                ->where(
+                    $queryBuilder->expr()->eq(
+                        'pid',
+                        $queryBuilder->createNamedParameter($pid, \PDO::PARAM_INT)
+                    )
+                )
+                ->execute();
+
+            foreach ($recordRows as $row) {
+                $items[] = $this->getItemByFlexform($row['uid'], $row['pi_flexform']);
+            }
+        }
+
         return $items;
     }
 
@@ -234,7 +320,8 @@ class DceEndpoint implements EndpointInterface
                     $fieldType = FieldType::CHECKBOX;
                     break;
                 default:
-                    echo $type;
+                    // TODO: Add FAL for images
+                    // print_r($type);
                     exit;
             }
 
@@ -262,9 +349,14 @@ class DceEndpoint implements EndpointInterface
                         // Not supported at the moment...
                     }
 
+                    // DCE does not support multiple selects
+                    $newtField->setCount(1);
+                    /*
                     if (isset($config['maxitems']) && intval($config['maxitems']) > 0) {
                         $newtField->setCount(intval($config['maxitems']));
                     }
+                    */
+
                     if (isset($config['minitems']) && intval($config['minitems']) > 0) {
                         $evals[] = 'required';
                     }
@@ -281,6 +373,72 @@ class DceEndpoint implements EndpointInterface
         }
 
         return null;
+    }
+
+    /**
+     * Returns an item based on id and flexform
+     *
+     * @param integer $id
+     * @param string $flexform
+     * @return Item
+     */
+    private function getItemByFlexform(int $id, string $flexform): Item
+    {
+        $item = new Item();
+        $item->setId(strval($id));
+        $flexformData = FlexformService::get()->convertFlexFormContentToArray($flexform, 'lDEF', 'vDEF');
+        $title = 'ID: ' . strval($id);
+        $description = null;
+        if (isset($flexformData['settings'])) {
+            if (isset($flexformData['settings'][$this->fieldTitle])) {
+                $title = $flexformData['settings'][$this->fieldTitle];
+            }
+            if (isset($flexformData['settings'][$this->fieldDescription])) {
+                $description = $flexformData['settings'][$this->fieldDescription];
+            }
+        }
+        $item->setTitle($title);
+        if ($description) {
+            $item->setDescription($description);
+        }
+
+        return $item;
+    }
+
+    /**
+     * Returns the Flexform with the values from params
+     *
+     * @param array $params
+     * @return string
+     */
+    private function getFlexformFromParams(array $params): string
+    {
+        $inputDatabase = new InputDatabase();
+        $dces = $inputDatabase->getDces();
+        $usedDce = null;
+        foreach ($dces as $dce) {
+            if ($dce['identifier'] == 'dce_' . $this->pluginName) {
+                $usedDce = $dce;
+            }
+        }
+        if ($usedDce) {
+            foreach ($usedDce['tabs'] as $tab) {
+                foreach ($tab['fields'] as $field) {
+                    $val = isset($params[$field['variable']]) ? strval($params[$field['variable']]) : '';
+                    // DCE doas not support multiple selects
+                    $json = json_decode($val);
+                    if (is_countable($json)) {
+                        $val = $json[0];
+                    }
+                    $data['data']['sheet.' . $tab['variable']]['lDEF']['settings.' . $field['variable']] = [
+                        'vDEF' => $val
+                    ];
+                }
+            }
+        }
+
+        $flexFormTools = new FlexFormTools();
+        return $flexFormTools->flexArray2Xml($data, true);
     }
 
     /**
