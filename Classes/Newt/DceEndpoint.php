@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Infonique\Newt4Dce\Newt;
 
 use Infonique\Newt\NewtApi\EndpointInterface;
+use Infonique\Newt\NewtApi\EndpointOptions;
 use Infonique\Newt\NewtApi\Field;
 use Infonique\Newt\NewtApi\FieldItem;
 use Infonique\Newt\NewtApi\FieldType;
@@ -38,10 +39,10 @@ class DceEndpoint implements EndpointInterface
     private array $settings;
     private array $settingsDce;
 
-    // TODO: From where should we take this?
-    private string $pluginName = 'test';
-    private string $fieldTitle = 'text';
-    private string $fieldDescription = 'textarea';
+    // These options will be filled by EndpointOptions
+    private string $pluginName = '';
+    private string $fieldTitle = '';
+    private string $fieldDescription = '';
 
     private DceRepository $dceRepository;
     private PersistenceManager $persistenceManager;
@@ -62,6 +63,32 @@ class DceEndpoint implements EndpointInterface
         } catch (\Exception $exception) {
             // do nothing
         }
+    }
+
+    /**
+     * Pass the EndpointOptions to the class
+     *
+     * @param EndpointOptions $endpointOptions
+     * @return void
+     */
+    public function setEndpointOptions(EndpointOptions $endpointOptions): void
+    {
+        if ($endpointOptions) {
+            $this->pluginName = $endpointOptions->getOption1();
+            $this->fieldTitle = $endpointOptions->getOption2();
+            $this->fieldDescription = $endpointOptions->getOption3();
+        }
+    }
+
+    /**
+     * Returns the hint for EndpointOptions
+     *
+     * @return string|null
+     */
+    public function getEndpointOptionsHint(): ?string
+    {
+        $languageFile = 'LLL:EXT:newt4dce/Resources/Private/Language/locallang_db.xlf:';
+        return $GLOBALS['LANG']->sL($languageFile . 'tx_newt4dce.options.hint');
     }
 
     /**

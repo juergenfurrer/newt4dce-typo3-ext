@@ -3,17 +3,13 @@
 	<file source-language="en" datatype="plaintext" original="EXT:newt/Resources/Private/Language/locallang_db.xlf" date="2022-01-05T20:01:01Z" product-name="newt">
 		<header/>
 		<body>
-			<trans-unit id="configuration_customSubCategories_fields" resname="configuration_customSubCategories_fields">
-				<source>Fields available</source>
-			</trans-unit>
-			<trans-unit id="configuration_customSubCategories_required" resname="configuration_customSubCategories_required">
-				<source>Fields required</source>
-			</trans-unit>
-			<trans-unit id="configuration_customSubCategories_value" resname="configuration_customSubCategories_value">
-				<source>Default values</source>
-			</trans-unit>
 			<trans-unit id="configuration_customSubCategories_list" resname="configuration_customSubCategories_list">
 				<source>List settings</source>
+			</trans-unit>
+			<trans-unit id="tx_newt4dce.options.hint" resname="tx_newt4dce.options.hint">
+				<source>Option1: dce-identifier
+Option2: dce-field for list-title
+Option3: dce-field for list-description</source>
 			</trans-unit>
 		</body>
 	</file>
