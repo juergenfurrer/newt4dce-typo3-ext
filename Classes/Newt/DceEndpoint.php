@@ -33,6 +33,7 @@ use TYPO3\CMS\Extbase\Configuration\ConfigurationManager;
 use TYPO3\CMS\Extbase\Configuration\ConfigurationManagerInterface;
 use TYPO3\CMS\Extbase\Persistence\Generic\PersistenceManager;
 use TYPO3\CMS\Extbase\Object\ObjectManager;
+use TYPO3\CMS\Extbase\Service\CacheService;
 
 class DceEndpoint implements EndpointInterface
 {
@@ -125,6 +126,9 @@ class DceEndpoint implements EndpointInterface
             $data
         );
 
+        // Clear the cache
+        $this->clearCacheForPage($pid);
+
         return $this->getItemByFlexform($id, $flexForm);
     }
 
@@ -149,6 +153,7 @@ class DceEndpoint implements EndpointInterface
             ->from($tableName)
             ->where(
                 $queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($id, \PDO::PARAM_INT)),
+                $queryBuilder->expr()->eq('deleted', $queryBuilder->createNamedParameter(0, \PDO::PARAM_INT)),
                 $queryBuilder->expr()->eq('CType', $queryBuilder->createNamedParameter('dce_' . $this->pluginName, \PDO::PARAM_STR)),
             )
             ->execute()
@@ -198,6 +203,9 @@ class DceEndpoint implements EndpointInterface
             ]
         );
 
+        // Clear the cache
+        $this->clearCacheForContent($id);
+
         return $this->getItemByFlexform($id, $flexForm);
     }
 
@@ -221,6 +229,9 @@ class DceEndpoint implements EndpointInterface
                 ]
             );
             $this->persistenceManager->persistAll();
+
+            // Clear the cache
+            $this->clearCacheForContent($id);
         } catch (\Throwable $th) {
             return false;
         }
@@ -248,6 +259,7 @@ class DceEndpoint implements EndpointInterface
                 ->from($tableName)
                 ->where(
                     $queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($pid, \PDO::PARAM_INT)),
+                    $queryBuilder->expr()->eq('deleted', $queryBuilder->createNamedParameter(0, \PDO::PARAM_INT)),
                     $queryBuilder->expr()->eq('CType', $queryBuilder->createNamedParameter('dce_' . $this->pluginName, \PDO::PARAM_STR)),
                 )
                 ->execute();
@@ -467,6 +479,50 @@ class DceEndpoint implements EndpointInterface
 
         $flexFormTools = new FlexFormTools();
         return $flexFormTools->flexArray2Xml($data, true);
+    }
+
+    /**
+     * Clear the cache for this page
+     *
+     * @param int $pid
+     * @return void
+     */
+    private function clearCacheForPage($pid)
+    {
+        /** @var CacheService */
+        $cacheManager = GeneralUtility::makeInstance(CacheService::class);
+        $cacheManager->clearPageCache($pid);
+    }
+
+    /**
+     * Clear the cache for the page of this uid
+     *
+     * @param int $uid
+     * @return void
+     */
+    private function clearCacheForContent($uid)
+    {
+        $tableName = 'tt_content';
+        /** @var QueryBuilder */
+        $queryBuilder = DatabaseUtility::getConnectionPool()->getQueryBuilderForTable($tableName);
+        $queryBuilder->getRestrictions()->removeAll();
+        $records = $queryBuilder
+            ->select('pid')
+            ->from($tableName)
+            ->where(
+                $queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($uid, \PDO::PARAM_INT)),
+                $queryBuilder->expr()->eq('deleted', $queryBuilder->createNamedParameter(0, \PDO::PARAM_INT)),
+                $queryBuilder->expr()->eq('CType', $queryBuilder->createNamedParameter('dce_' . $this->pluginName, \PDO::PARAM_STR)),
+            )
+            ->execute()
+            ->fetchAll();
+
+        foreach ($records as $record) {
+            if (intval($record['pid']) > 0) {
+                // Clear the cache
+                $this->clearCacheForPage(intval($record['pid']));
+            }
+        }
     }
 
     /**
