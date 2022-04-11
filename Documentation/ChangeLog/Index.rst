@@ -6,6 +6,10 @@
 Change log
 ==========
 
+Version 1.0.1
+-------------
+Bugfix
+
 Version 1.0.0
 -------------
 Initial development

@@ -6,8 +6,12 @@
 Known Problems
 ==============
 
-- FAL data-type is missing
+- FAL data-type not implemented
 
-- Select with foreign_table are not implemented jet
+- Placement of the tt_content is not implemented
+
+- Sorting is not implemented
+
+- Select with foreign_table is not implemented
 
 - If you have any questions, please contact us (info@infonique.ch)

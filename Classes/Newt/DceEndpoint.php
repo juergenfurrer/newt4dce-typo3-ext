@@ -107,17 +107,22 @@ class DceEndpoint implements EndpointInterface
         $pid = $model->getPageUid();
         $flexForm = $this->getFlexformFromParams($model->getParams());
 
+        $data = [
+            'pid' => $pid,
+            'CType' => 'dce_' . $this->pluginName,
+            'tstamp' => time(),
+            'crdate' => time(),
+            'pi_flexform' => $flexForm,
+        ];
+        if ($model->getBackendUserUid() > 0) {
+            $data['cruser_id'] = $model->getBackendUserUid();
+        }
+
         $tableName = 'tt_content';
         $connection = DatabaseUtility::getConnectionPool()->getConnectionForTable($tableName);
         $id = $connection->insert(
             $tableName,
-            [
-                'pid' => $pid,
-                'CType' => 'dce_' . $this->pluginName,
-                'tstamp' => time(),
-                'crdate' => time(),
-                'pi_flexform' => $flexForm,
-            ]
+            $data
         );
 
         return $this->getItemByFlexform($id, $flexForm);
@@ -140,13 +145,11 @@ class DceEndpoint implements EndpointInterface
         $queryBuilder = DatabaseUtility::getConnectionPool()->getQueryBuilderForTable($tableName);
         $queryBuilder->getRestrictions()->removeAll();
         $records = $queryBuilder
-            ->select('*')
+            ->select('uid', 'pi_flexform')
             ->from($tableName)
             ->where(
-                $queryBuilder->expr()->eq(
-                    'uid',
-                    $queryBuilder->createNamedParameter($id, \PDO::PARAM_INT)
-                )
+                $queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($id, \PDO::PARAM_INT)),
+                $queryBuilder->expr()->eq('CType', $queryBuilder->createNamedParameter('dce_' . $this->pluginName, \PDO::PARAM_STR)),
             )
             ->execute()
             ->fetchAll();
@@ -190,7 +193,8 @@ class DceEndpoint implements EndpointInterface
                 'pi_flexform' => $flexForm,
             ],
             [
-                'uid' => intval($id),
+                'uid' => $id,
+                'CType' => 'dce_' . $this->pluginName,
             ]
         );
 
@@ -211,7 +215,10 @@ class DceEndpoint implements EndpointInterface
             GeneralUtility::makeInstance(ConnectionPool::class)->getConnectionForTable($tableName)->update(
                 $tableName,
                 ['deleted' => '1'],
-                ['uid' => $id]
+                [
+                    'uid' => $id,
+                    'CType' => 'dce_' . $this->pluginName,
+                ]
             );
             $this->persistenceManager->persistAll();
         } catch (\Throwable $th) {
@@ -240,15 +247,15 @@ class DceEndpoint implements EndpointInterface
                 ->select('uid', 'pi_flexform')
                 ->from($tableName)
                 ->where(
-                    $queryBuilder->expr()->eq(
-                        'pid',
-                        $queryBuilder->createNamedParameter($pid, \PDO::PARAM_INT)
-                    )
+                    $queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($pid, \PDO::PARAM_INT)),
+                    $queryBuilder->expr()->eq('CType', $queryBuilder->createNamedParameter('dce_' . $this->pluginName, \PDO::PARAM_STR)),
                 )
                 ->execute();
 
             foreach ($recordRows as $row) {
-                $items[] = $this->getItemByFlexform($row['uid'], $row['pi_flexform']);
+                if (! empty($row['pi_flexform'])) {
+                    $items[] = $this->getItemByFlexform($row['uid'], $row['pi_flexform']);
+                }
             }
         }
 
