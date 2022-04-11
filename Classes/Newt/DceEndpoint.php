@@ -20,11 +20,9 @@ use Infonique\Newt\NewtApi\MethodUpdateModel;
 use T3\Dce\Components\ContentElementGenerator\InputDatabase;
 use T3\Dce\Domain\Model\Dce;
 use T3\Dce\Domain\Model\DceField;
-use T3\Dce\Domain\Repository\DceFieldRepository;
 use T3\Dce\Domain\Repository\DceRepository;
 use T3\Dce\Utility\DatabaseUtility;
 use T3\Dce\Utility\FlexformService;
-use T3\Dce\Utility\TypoScript;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
 use TYPO3\CMS\Core\Configuration\FlexForm\FlexFormTools;
 use TYPO3\CMS\Core\Database\ConnectionPool;
@@ -46,16 +44,12 @@ class DceEndpoint implements EndpointInterface
     private string $fieldDescription = 'textarea';
 
     private DceRepository $dceRepository;
-    private DceFieldRepository $dceFieldRepository;
-    private TypoScript $typoScriptUtility;
     private PersistenceManager $persistenceManager;
 
     public function __construct(ConfigurationManager $configurationManager, PersistenceManager $persistenceManager)
     {
         $objectManager = GeneralUtility::makeInstance(ObjectManager::class);
         $this->dceRepository = $objectManager->get(DceRepository::class);
-        $this->dceFieldRepository = $objectManager->get(DceFieldRepository::class);
-        $this->typoScriptUtility = $objectManager->get(TypoScript::class);
         $this->persistenceManager = $persistenceManager;
 
         $conf = $configurationManager->getConfiguration(ConfigurationManagerInterface::CONFIGURATION_TYPE_FULL_TYPOSCRIPT);
