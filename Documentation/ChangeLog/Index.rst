@@ -6,6 +6,10 @@
 Change log
 ==========
 
+Version 1.1.0
+-------------
+Add FAL-field
+
 Version 1.0.2
 -------------
 Fix cache on create, update, delete

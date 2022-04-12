@@ -18,7 +18,6 @@ use Infonique\Newt\NewtApi\MethodListModel;
 use Infonique\Newt\NewtApi\MethodReadModel;
 use Infonique\Newt\NewtApi\MethodType;
 use Infonique\Newt\NewtApi\MethodUpdateModel;
-use T3\Dce\Components\ContentElementGenerator\InputDatabase;
 use T3\Dce\Domain\Model\Dce;
 use T3\Dce\Domain\Model\DceField;
 use T3\Dce\Domain\Repository\DceRepository;
@@ -28,6 +27,11 @@ use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
 use TYPO3\CMS\Core\Configuration\FlexForm\FlexFormTools;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
+use TYPO3\CMS\Core\Resource\FileReference;
+use TYPO3\CMS\Core\Resource\FileRepository;
+use TYPO3\CMS\Core\Resource\ResourceStorage;
+use TYPO3\CMS\Core\Resource\StorageRepository;
+use TYPO3\CMS\Core\Utility\Exception\NotImplementedMethodException;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Configuration\ConfigurationManager;
 use TYPO3\CMS\Extbase\Configuration\ConfigurationManagerInterface;
@@ -39,6 +43,7 @@ class DceEndpoint implements EndpointInterface
 {
     private array $settings;
     private array $settingsDce;
+    private int $maxImageCount = 6;
 
     // These options will be filled by EndpointOptions
     private string $pluginName = '';
@@ -93,13 +98,16 @@ class DceEndpoint implements EndpointInterface
     }
 
     /**
-     * Creats a new news-item
+     * Creats a new dce baset tt_content
+     * TODO: Not implemented by now...
      *
      * @param MethodCreateModel $model
      * @return Item
      */
     public function methodCreate(MethodCreateModel $model): Item
     {
+        throw new NotImplementedMethodException();
+        /*
         $item = new Item();
         if (!$model || count($model->getParams()) == 0) {
             return $item;
@@ -130,10 +138,11 @@ class DceEndpoint implements EndpointInterface
         $this->clearCacheForPage($pid);
 
         return $this->getItemByFlexform($id, $flexForm);
+        */
     }
 
     /**
-     * Read a news-item by readId
+     * Read a tt_content by readId
      *
      * @param MethodReadModel $model
      * @return Item
@@ -164,8 +173,72 @@ class DceEndpoint implements EndpointInterface
             $item->setId(strval($record['uid']));
             $flexformData = FlexformService::get()->convertFlexFormContentToArray($record['pi_flexform'], 'lDEF', 'vDEF');
             if (isset($flexformData['settings']) && is_countable($flexformData['settings'])) {
+                $dce = $this->getCurrentDce();
                 foreach ($flexformData['settings'] as $key => $val) {
-                    $item->addValue(new ItemValue($key, $val));
+                    if ($dce) {
+                        $dceField = $this->getDceFieldByVariable($dce, $key);
+                        if ($dceField) {
+                            $variable = $dceField->getVariable();
+                            $configArray = $dceField->getConfigurationAsArray();
+                            $config = isset($configArray['config']) ? $configArray['config'] : [];
+                            $maxItems = 1;
+                            if (isset($config['maxitems'])) {
+                                $maxItems = $config['maxitems'];
+                            }
+        
+                            if ($dceField->isFal()) {
+                                // Image
+                                $imgCount = min($this->maxImageCount, intval($maxItems));
+                                if ($imgCount > 0) {
+                                    /** @var FileRepository */
+                                    $fileRepository = GeneralUtility::makeInstance(
+                                        FileRepository::class
+                                    );
+                                    $fileReferences = $fileRepository->findByRelation(
+                                        'tt_content',
+                                        $variable,
+                                        $record['uid']
+                                    );
+
+                                    for ($i = 0; $i < $imgCount; $i++) {
+                                        $imgNum = $i > 0 ? $i : "";
+                                        $paramImage = "{$variable}{$imgNum}";
+                                        $paramImageUid = "{$variable}{$imgNum}Uid";
+
+                                        $falMedia = null;
+                                        if ($fileReferences) {
+                                            $k = 0;
+                                            foreach ($fileReferences as $mediaItem) {
+                                                if (!$falMedia && $k == $i) {
+                                                    /** @var FileReference */
+                                                    $falMedia = $mediaItem;
+                                                }
+                                                $k++;
+                                            }
+                                        }
+                                        if ($falMedia) {
+                                            $storageId = $falMedia->getOriginalFile()->getProperty('storage');
+                                            $identifier = $falMedia->getOriginalFile()->getProperty('identifier');
+                                            /** @var StorageRepository */
+                                            $storageRepository = GeneralUtility::makeInstance(StorageRepository::class);
+                                            if ($storageRepository) {
+                                                /** @var ResourceStorage */
+                                                $storage = $storageRepository->findByUid($storageId);
+                                                $file = $storage->getFile($identifier);
+                                                if ($file) {
+                                                    $fileContent = $file->getContents();
+                                                    $item->addValue(new ItemValue($paramImageUid, strval($falMedia->getUid())));
+                                                    $item->addValue(new ItemValue($paramImage, base64_encode($fileContent)));
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                $item->addValue(new ItemValue($key, $val));
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -174,7 +247,7 @@ class DceEndpoint implements EndpointInterface
     }
 
     /**
-     * Update the news-entry with the new data
+     * Update the tt_content with the new data
      *
      * @param MethodUpdateModel $model
      * @return Item
@@ -187,7 +260,7 @@ class DceEndpoint implements EndpointInterface
         }
 
         $id = intval($model->getUpdateId());
-        $flexForm = $this->getFlexformFromParams($model->getParams());
+        $flexForm = $this->getFlexformFromParams($model->getUpdateId(), $model->getParams());
 
         $tableName = 'tt_content';
         $connection = DatabaseUtility::getConnectionPool()->getConnectionForTable($tableName);
@@ -210,7 +283,7 @@ class DceEndpoint implements EndpointInterface
     }
 
     /**
-     * Deletes a news-item by deleteId
+     * Deletes a tt_content by deleteId
      *
      * @param MethodDeleteModel $model
      * @return boolean
@@ -220,7 +293,8 @@ class DceEndpoint implements EndpointInterface
         try {
             $tableName = 'tt_content';
             $id = intval($model->getDeleteId());
-            GeneralUtility::makeInstance(ConnectionPool::class)->getConnectionForTable($tableName)->update(
+            $connectionPool = GeneralUtility::makeInstance(ConnectionPool::class)->getConnectionForTable($tableName);
+            $connectionPool->update(
                 $tableName,
                 ['deleted' => '1'],
                 [
@@ -228,7 +302,6 @@ class DceEndpoint implements EndpointInterface
                     'CType' => 'dce_' . $this->pluginName,
                 ]
             );
-            $this->persistenceManager->persistAll();
 
             // Clear the cache
             $this->clearCacheForContent($id);
@@ -265,7 +338,7 @@ class DceEndpoint implements EndpointInterface
                 ->execute();
 
             foreach ($recordRows as $row) {
-                if (! empty($row['pi_flexform'])) {
+                if (!empty($row['pi_flexform'])) {
                     $items[] = $this->getItemByFlexform($row['uid'], $row['pi_flexform']);
                 }
             }
@@ -282,7 +355,6 @@ class DceEndpoint implements EndpointInterface
     public function getAvailableMethodTypes(): array
     {
         return [
-            MethodType::CREATE,
             MethodType::READ,
             MethodType::UPDATE,
             MethodType::DELETE,
@@ -298,16 +370,128 @@ class DceEndpoint implements EndpointInterface
     public function getAvailableFields(): array
     {
         $ret = [];
-        $uid = $this->dceRepository::extractUidFromCTypeOrIdentifier('dce_' . $this->pluginName);
-
-        /** @var Dce $dce */
-        $dce = $this->dceRepository->findByUid($uid);
+        $dce = $this->getCurrentDce();
         if ($dce) {
+            $validation = new FieldValidation();
+            $validation->setRequired(true);
+
             /** @var DceField $field */
             foreach ($dce->getFields() as $dceField) {
-                $field = $this->getNewtFieldFromDceField($dceField);
-                if ($field) {
-                    $ret[] = $field;
+                if ($dceField->isElement()) {
+                    $variable = $dceField->getVariable();
+                    $label = $dceField->getTitle();
+                    $type = null;
+                    $evals = [];
+                    $default = null;
+                    $configArray = $dceField->getConfigurationAsArray();
+                    $config = isset($configArray['config']) ? $configArray['config'] : [];
+                    if (isset($config['type'])) {
+                        $type = $config['type'];
+                    }
+                    if (isset($config['eval'])) {
+                        $evals = GeneralUtility::trimExplode(',', $config['eval'], true);
+                    }
+                    if (isset($config['default'])) {
+                        $default = $config['default'];
+                    }
+                    if (isset($config['minitems'])) {
+                        $minitems = $config['minitems'];
+                    }
+                    if (isset($config['maxitems'])) {
+                        $maxItems = $config['maxitems'];
+                    }
+
+                    $fieldType = FieldType::UNKNOWN;
+                    switch ($type) {
+                        case 'input':
+                            $fieldType = FieldType::TEXT;
+                            break;
+                        case 'text':
+                            if (isset($config['richtextConfiguration'])) {
+                                $fieldType = FieldType::HTML;
+                            } else {
+                                $fieldType = FieldType::TEXTAREA;
+                            }
+                            break;
+                        case 'select':
+                            $fieldType = FieldType::SELECT;
+                            break;
+                        case 'check':
+                            $fieldType = FieldType::CHECKBOX;
+                            break;
+                        default:
+                            // print_r($type);exit;
+                            break;
+                    }
+
+                    if ('inline' === $config['type'] && 'sys_file_reference' === $config['foreign_table']) {
+                        $fieldType = FieldType::IMAGE;
+                    }
+
+                    if ($fieldType == FieldType::IMAGE) {
+                        $imgCount = min($this->maxImageCount, intval($maxItems));
+                        if ($imgCount > 0) {
+                            $divider = new Field();
+                            $divider->setType(FieldType::DIVIDER);
+
+                            // Add the divider
+                            $ret[] = $divider;
+
+                            for ($i = 0; $i < $imgCount; $i++) {
+                                $imgNum = $i > 0 ? $i : "";
+                                $paramImage = "{$variable}{$imgNum}";
+                                $paramImageUid = "{$variable}{$imgNum}Uid";
+                                $imageUid = new Field();
+                                $imageUid->setName($paramImageUid);
+                                $imageUid->setType(FieldType::HIDDEN);
+                                $ret[] = $imageUid;
+
+                                $image = new Field();
+                                $image->setName($paramImage);
+                                $image->setLabel($label ?? '');
+                                $image->setType(FieldType::IMAGE);
+                                if ($minitems > $i) {
+                                    $image->setValidation($validation);
+                                }
+                                $ret[] = $image;
+                            }
+
+                            // Add the divider
+                            $ret[] = $divider;
+                        }
+                    } else if ($fieldType != FieldType::UNKNOWN) {
+                        $newtField = new Field();
+                        $newtField->setType($fieldType);
+                        $newtField->setLabel($label ?? '');
+                        $newtField->setName($variable);
+
+                        if ($default != null) {
+                            $newtField->setValue($default);
+                        }
+
+                        if ($fieldType == FieldType::SELECT) {
+                            // Add items
+                            if (isset($config['items'])) {
+                                foreach ($config['items'] as $item) {
+                                    $fieldItem = new FieldItem($item[1], $item[0]);
+                                    $newtField->addItem($fieldItem);
+                                }
+                            }
+
+                            if (isset($config['foreign_table'])) {
+                                // TODO: what about foreign_table?
+                                // Not supported at the moment...
+                            }
+
+                            // DCE does not support multiple selects
+                            $newtField->setCount(1);
+                        }
+
+                        if (in_array('required', $evals) || $minitems > 0) {
+                            $newtField->setValidation($validation);
+                        }
+                        $ret[] = $newtField;
+                    }
                 }
             }
         }
@@ -316,102 +500,31 @@ class DceEndpoint implements EndpointInterface
     }
 
     /**
-     * Returns a Newt-Field based on the Dce-Field
+     * Returns the current Dce
      *
-     * @param DceField $dceField
-     * @return Field|null
+     * @return Dce|null
      */
-    private function getNewtFieldFromDceField(DceField $dceField): ?Field
+    private function getCurrentDce(): ?Dce
     {
-        if ($dceField->getType() == DceField::TYPE_ELEMENT) {
-            $variabl = $dceField->getVariable();
-            $label = $dceField->getTitle();
-            $type = null;
-            $evals = [];
-            $default = null;
-            $configArray = $dceField->getConfigurationAsArray();
-            $config = isset($configArray['config']) ? $configArray['config'] : [];
-            if (isset($config['type'])) {
-                $type = $config['type'];
-            }
-            if (isset($config['eval'])) {
-                $evals = GeneralUtility::trimExplode(',', $config['eval'], true);
-            }
-            if (isset($config['default'])) {
-                $default = $config['default'];
-            }
+        $uid = $this->dceRepository::extractUidFromCTypeOrIdentifier('dce_' . $this->pluginName);
+        return $this->dceRepository->findByUid($uid);
+    }
 
-            $fieldType = FieldType::UNKNOWN;
-            switch ($type) {
-                case 'input':
-                    $fieldType = FieldType::TEXT;
-                    break;
-                case 'text':
-                    if (isset($config['richtextConfiguration'])) {
-                        $fieldType = FieldType::HTML;
-                    } else {
-                        $fieldType = FieldType::TEXTAREA;
-                    }
-                    break;
-                case 'select':
-                    $fieldType = FieldType::SELECT;
-                    break;
-                case 'check':
-                    $fieldType = FieldType::CHECKBOX;
-                    break;
-                default:
-                    // TODO: Add FAL for images
-                    // print_r($type);
-                    exit;
-            }
-
-            if ($fieldType != FieldType::UNKNOWN) {
-                $newtField = new Field();
-                $newtField->setType($fieldType);
-                $newtField->setLabel($label);
-                $newtField->setName($variabl);
-
-                if ($default != null) {
-                    $newtField->setValue($default);
-                }
-
-                if ($fieldType == FieldType::SELECT) {
-                    // Add items
-                    if (isset($config['items'])) {
-                        foreach ($config['items'] as $item) {
-                            $fieldItem = new FieldItem($item[1], $item[0]);
-                            $newtField->addItem($fieldItem);
-                        }
-                    }
-
-                    if (isset($config['foreign_table'])) {
-                        // TODO: what about foreign_table?
-                        // Not supported at the moment...
-                    }
-
-                    // DCE does not support multiple selects
-                    $newtField->setCount(1);
-                    /*
-                    if (isset($config['maxitems']) && intval($config['maxitems']) > 0) {
-                        $newtField->setCount(intval($config['maxitems']));
-                    }
-                    */
-
-                    if (isset($config['minitems']) && intval($config['minitems']) > 0) {
-                        $evals[] = 'required';
-                    }
-                }
-
-                if (in_array('required', $evals)) {
-                    $validation = new FieldValidation();
-                    $validation->setRequired(true);
-                    $newtField->setValidation($validation);
-                }
-
-                return $newtField;
+    /**
+     * Returns the DceField matching the variable
+     *
+     * @param Dce $dce
+     * @param string $variable
+     * @return DceField|null
+     */
+    private function getDceFieldByVariable(Dce $dce, string $variable): ?DceField
+    {
+        /** @var DceField $field */
+        foreach ($dce->getFields() as $dceField) {
+            if ($dceField->getVariable() == $variable) {
+                return $dceField;
             }
         }
-
         return null;
     }
 
@@ -448,37 +561,162 @@ class DceEndpoint implements EndpointInterface
     /**
      * Returns the Flexform with the values from params
      *
+     * @param mixed $uid
      * @param array $params
      * @return string
      */
-    private function getFlexformFromParams(array $params): string
+    private function getFlexformFromParams($uid, array $params): string
     {
-        $inputDatabase = new InputDatabase();
-        $dces = $inputDatabase->getDces();
-        $usedDce = null;
-        foreach ($dces as $dce) {
-            if ($dce['identifier'] == 'dce_' . $this->pluginName) {
-                $usedDce = $dce;
-            }
-        }
-        if ($usedDce) {
-            foreach ($usedDce['tabs'] as $tab) {
-                foreach ($tab['fields'] as $field) {
-                    $val = isset($params[$field['variable']]) ? strval($params[$field['variable']]) : '';
-                    // DCE doas not support multiple selects
-                    $json = json_decode($val);
-                    if (is_countable($json)) {
-                        $val = $json[0];
+        $dce = $this->getCurrentDce();
+        $data = [
+            'data' => []
+        ];
+        if ($dce) {
+            $tabVariable = 'tabGeneral';
+            /** @var DceField $dceField */
+            foreach ($dce->getFields() as $dceField) {
+                $variable = $dceField->getVariable();
+                if ($dceField->isTab()) {
+                    $tabVariable = $variable;
+                } else if ($dceField->isElement()) {
+                    $val = isset($params[$variable]) ? strval($params[$variable]) : '';
+                    $configArray = $dceField->getConfigurationAsArray();
+                    $config = isset($configArray['config']) ? $configArray['config'] : [];
+                    if (isset($config['maxitems'])) {
+                        $maxItems = $config['maxitems'];
                     }
-                    $data['data']['sheet.' . $tab['variable']]['lDEF']['settings.' . $field['variable']] = [
-                        'vDEF' => $val
-                    ];
+                    if ($dceField->isFal()) {
+                        // Image
+                        $imgCount = min($this->maxImageCount, intval($maxItems));
+                        if ($imgCount > 0) {
+                            /** @var FileRepository */
+                            $fileRepository = GeneralUtility::makeInstance(
+                                FileRepository::class
+                            );
+                            $fileReferences = $fileRepository->findByRelation(
+                                'tt_content',
+                                $variable,
+                                $uid
+                            );
+
+                            for ($i = 0; $i < $imgCount; $i++) {
+                                $imgNum = $i > 0 ? $i : "";
+                                $paramImage = "{$variable}{$imgNum}";
+                                $paramImageUid = "{$variable}{$imgNum}Uid";
+
+                                /** @var FileReference */
+                                $usedMedia = null;
+                                $isNew = true;
+                                if ($fileReferences) {
+                                    foreach ($fileReferences as $mediaItem) {
+                                        if ($mediaItem->getUid() == intval($params[$paramImageUid])) {
+                                            /** @var FileReference */
+                                            $usedMedia = $mediaItem;
+                                            $isNew = false;
+                                            continue;
+                                        }
+                                    }
+                                }
+
+                                if (isset($params[$paramImage]) && $params[$paramImage] instanceof \Infonique\Newt\Domain\Model\FileReference) {
+                                    $imageRef = $params[$paramImage];
+
+                                    if ($isNew) {
+                                        $this->addFileReference(intval($uid), $imageRef->getUidLocal(), $variable);
+                                    } else {
+                                        $this->updateFileReference($usedMedia->getUid(), $imageRef->getUidLocal());
+                                    }
+                                } else if (isset($params[$paramImageUid]) && intval($params[$paramImageUid]) > 0 && !$isNew) {
+                                    // Remove image
+                                    $this->removeFileReference($usedMedia->getUid());
+                                }
+                            }
+                        }
+                    } else {
+                        // DCE does not support multiple selects
+                        $json = json_decode($val);
+                        if (is_countable($json)) {
+                            $val = $json[0];
+                        }
+                    }
                 }
+                $data['data']['sheet.' . $tabVariable]['lDEF']['settings.' . $variable] = [
+                    'vDEF' => $val
+                ];
             }
         }
 
         $flexFormTools = new FlexFormTools();
         return $flexFormTools->flexArray2Xml($data, true);
+    }
+
+    /**
+     * Set new Reference for a file
+     *
+     * @param int $uid
+     * @param int $newRefId
+     * @return void
+     */
+    private function updateFileReference(int $uid, int $newRefId)
+    {
+        $tableName = 'sys_file_reference';
+        $connectionPool = GeneralUtility::makeInstance(ConnectionPool::class)->getConnectionForTable($tableName);
+        $connectionPool->update(
+            $tableName,
+            ['uid_local' => $newRefId],
+            [
+                'uid' => $uid
+            ]
+        );
+    }
+
+    /**
+     * Add new filereference for this
+     *
+     * @param integer $uid
+     * @param integer $refId
+     * @param string $fieldname
+     * @return integer
+     */
+    private function addFileReference(int $uid, int $refId, string $fieldname): int
+    {
+        $tableName = 'sys_file_reference';
+        /** @var Connection */
+        $connection = GeneralUtility::makeInstance(ConnectionPool::class)->getConnectionForTable($tableName);
+        $connection->insert(
+            $tableName,
+            [
+                // 'pid' => $pid,
+                'tstamp' => time(),
+                'crdate' => time(),
+                'tablenames' => 'tt_content',
+                'table_local' => 'sys_file',
+                'uid_foreign' => $uid,
+                'uid_local' => $refId,
+                'fieldname' => $fieldname,
+            ]
+        );
+
+        return (int)$connection->lastInsertId($tableName);
+    }
+
+    /**
+     * Remove a file-reference
+     *
+     * @param integer $uid
+     * @return void
+     */
+    private function removeFileReference(int $uid)
+    {
+        $tableName = 'sys_file_reference';
+        $connectionPool = GeneralUtility::makeInstance(ConnectionPool::class)->getConnectionForTable($tableName);
+        $connectionPool->update(
+            $tableName,
+            ['deleted' => 1],
+            [
+                'uid' => $uid
+            ]
+        );
     }
 
     /**

@@ -6,12 +6,12 @@
 Known Problems
 ==============
 
-- FAL data-type not implemented
+- Create-method is not implemented
 
-- Placement of the tt_content is not implemented
-
-- Sorting is not implemented
+- Only simple DCE-Items are supported
 
 - Select with foreign_table is not implemented
+
+- Color-Picker is not implemented by the App
 
 - If you have any questions, please contact us (info@infonique.ch)
