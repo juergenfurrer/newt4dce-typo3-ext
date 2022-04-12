@@ -383,6 +383,7 @@ class DceEndpoint implements EndpointInterface
                     $type = null;
                     $evals = [];
                     $default = null;
+                    $renderType = null;
                     $configArray = $dceField->getConfigurationAsArray();
                     $config = isset($configArray['config']) ? $configArray['config'] : [];
                     if (isset($config['type'])) {
@@ -393,6 +394,9 @@ class DceEndpoint implements EndpointInterface
                     }
                     if (isset($config['default'])) {
                         $default = $config['default'];
+                    }
+                    if (isset($config['renderType'])) {
+                        $renderType = $config['renderType'];
                     }
                     if (isset($config['minitems'])) {
                         $minitems = $config['minitems'];
@@ -426,6 +430,8 @@ class DceEndpoint implements EndpointInterface
 
                     if ('inline' === $config['type'] && 'sys_file_reference' === $config['foreign_table']) {
                         $fieldType = FieldType::IMAGE;
+                    } else if ($renderType == 'colorpicker') {
+                        $fieldType = FieldType::COLOR;
                     }
 
                     if ($fieldType == FieldType::IMAGE) {
