@@ -434,8 +434,10 @@ class DceEndpoint implements EndpointInterface
                             $divider = new Field();
                             $divider->setType(FieldType::DIVIDER);
 
-                            // Add the divider
-                            $ret[] = $divider;
+                            if ($imgCount > 1) {
+                                // Add the divider
+                                $ret[] = $divider;
+                            }
 
                             for ($i = 0; $i < $imgCount; $i++) {
                                 $imgNum = $i > 0 ? $i : "";
@@ -456,8 +458,10 @@ class DceEndpoint implements EndpointInterface
                                 $ret[] = $image;
                             }
 
-                            // Add the divider
-                            $ret[] = $divider;
+                            if ($imgCount > 1) {
+                                // Add the divider
+                                $ret[] = $divider;
+                            }
                         }
                     } else if ($fieldType != FieldType::UNKNOWN) {
                         $newtField = new Field();
