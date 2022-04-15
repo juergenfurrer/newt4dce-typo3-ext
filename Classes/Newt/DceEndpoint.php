@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Infonique\Newt4Dce\Newt;
 
 use Infonique\Newt\NewtApi\EndpointInterface;
-use Infonique\Newt\NewtApi\EndpointOptions;
+use Infonique\Newt\NewtApi\EndpointOptionsInterface;
 use Infonique\Newt\NewtApi\Field;
 use Infonique\Newt\NewtApi\FieldItem;
 use Infonique\Newt\NewtApi\FieldType;
@@ -39,7 +39,7 @@ use TYPO3\CMS\Extbase\Persistence\Generic\PersistenceManager;
 use TYPO3\CMS\Extbase\Object\ObjectManager;
 use TYPO3\CMS\Extbase\Service\CacheService;
 
-class DceEndpoint implements EndpointInterface
+class DceEndpoint implements EndpointInterface, EndpointOptionsInterface
 {
     private array $settings;
     private array $settingsDce;
@@ -72,18 +72,40 @@ class DceEndpoint implements EndpointInterface
     }
 
     /**
-     * Pass the EndpointOptions to the class
+     * Pass one EndpointOption to the class
      *
-     * @param EndpointOptions $endpointOptions
+     * @param string $optionName
+     * @param string $optionValue
      * @return void
      */
-    public function setEndpointOptions(EndpointOptions $endpointOptions): void
+    public function addEndpointOption(string $optionName, string $optionValue): void
     {
-        if ($endpointOptions) {
-            $this->pluginName = $endpointOptions->getOption1();
-            $this->fieldTitle = $endpointOptions->getOption2();
-            $this->fieldDescription = $endpointOptions->getOption3();
+        switch ($optionName) {
+            case "pluginName" :
+                $this->pluginName = $optionValue;
+                break;
+            case "fieldTitle" :
+                $this->fieldTitle = $optionValue;
+                break;
+            case "fieldDescription" :
+                $this->fieldDescription = $optionValue;
+                break;
         }
+    }
+
+    /**
+     * Returns the array with needed options as an assoc-array ["key" => "label"]
+     *
+     * @return array
+     */
+    public function getNeededOptions(): array
+    {
+        $languageFile = 'LLL:EXT:newt4dce/Resources/Private/Language/locallang_db.xlf:';
+        return [
+            $GLOBALS['LANG']->sL($languageFile . 'tx_newt4dce.options.pluginName')       => "pluginName",
+            $GLOBALS['LANG']->sL($languageFile . 'tx_newt4dce.options.fieldTitle')       => "fieldTitle",
+            $GLOBALS['LANG']->sL($languageFile . 'tx_newt4dce.options.fieldDescription') => "fieldDescription",
+        ];
     }
 
     /**

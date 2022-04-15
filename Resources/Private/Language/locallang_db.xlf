@@ -6,10 +6,17 @@
 			<trans-unit id="configuration_customSubCategories_list" resname="configuration_customSubCategories_list">
 				<source>List settings</source>
 			</trans-unit>
+			<trans-unit id="tx_newt4dce.options.pluginName" resname="tx_newt4dce.options.pluginName">
+				<source>DCE-Identifier</source>
+			</trans-unit>
+			<trans-unit id="tx_newt4dce.options.fieldTitle" resname="tx_newt4dce.options.fieldTitle">
+				<source>DCE-Field for list-title</source>
+			</trans-unit>
+			<trans-unit id="tx_newt4dce.options.fieldDescription" resname="tx_newt4dce.options.fieldDescription">
+				<source>DCE-Field for list-description</source>
+			</trans-unit>
 			<trans-unit id="tx_newt4dce.options.hint" resname="tx_newt4dce.options.hint">
-				<source>Option1: dce-identifier
-Option2: dce-field for list-title
-Option3: dce-field for list-description</source>
+				<source> Please add the options to identify the DCE-Plugin and to define what should be displayed in the List</source>
 			</trans-unit>
 		</body>
 	</file>
