@@ -8,15 +8,33 @@ Add the Endpoint
 
 To add the endpoint, switch into list-view, chose the storage-page (see plugin.tx_newt.persistence.storagePid)
 
-Click the plus-button, to add a new record and chose "Endpoint" under "Newt"
+Click the plus-button, to add a new record and chose :code:`Endpoint` under :code:`Newt`
 
 Enter the Name and the description, the Client will see this labels.
 
 Chose the Endpoint Class :code:`Infonique\Newt4Dce\Newt\DceEndpoint` from the list
 
+
+Endpoint Options
+----------------
+
+Add the needed options to tell the Endpoint which DCE-Element to use and what fields are used to render the item in the App
+
+.. figure:: ../../Images/backend-04.jpg
+   :class: with-shadow
+   :alt: Options of the Endpoint
+
+
+Page UID
+--------
+
 If you fill in the Page UID, the records created with Newt will be stored on this page.
 
-Add at least the one Method
+
+Methods
+-------
+
+Add at least one Method
 
 If you use CRUD and use image/file upload, please add the :code:`READ` method!
 
