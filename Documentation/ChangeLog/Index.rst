@@ -9,6 +9,7 @@ Change log
 Version 1.2.0
 -------------
 Add Color-field
+Update to new Interface
 
 Version 1.1.0
 -------------
