@@ -12,6 +12,4 @@ Known Problems
 
 - Select with foreign_table is not implemented
 
-- Color-Picker is not implemented by the App
-
 - If you have any questions, please contact us (info@infonique.ch)
