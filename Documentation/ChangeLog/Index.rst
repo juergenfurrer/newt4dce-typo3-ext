@@ -6,6 +6,10 @@
 Change log
 ==========
 
+Version 1.2.2
+-------------
+Test desc
+
 Version 1.2.1
 -------------
 Deployment-automation
