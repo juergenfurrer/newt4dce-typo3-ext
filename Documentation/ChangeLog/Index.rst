@@ -6,6 +6,10 @@
 Change log
 ==========
 
+Version 1.2.3
+-------------
+Fix error in PHP 8
+
 Version 1.2.2
 -------------
 Test desc
