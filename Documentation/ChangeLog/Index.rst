@@ -6,6 +6,10 @@
 Change log
 ==========
 
+Version 2.0.1
+-------------
+Update readme
+
 Version 2.0.0
 -------------
 Add TYPO3 V12 support
