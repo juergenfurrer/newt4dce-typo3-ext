@@ -1,6 +1,6 @@
 [![Latest Stable Version](https://poser.pugx.org/swisscode/newt4dce/v/stable.svg)](https://extensions.typo3.org/extension/newt4dce/)
 [![TYPO3 11](https://img.shields.io/badge/TYPO3-11-orange.svg?style=flat-square)](https://get.typo3.org/version/11)
-[![TYPO3 10](https://img.shields.io/badge/TYPO3-10-orange.svg?style=flat-square)](https://get.typo3.org/version/10)
+[![TYPO3 12](https://img.shields.io/badge/TYPO3-12-orange.svg?style=flat-square)](https://get.typo3.org/version/12)
 [![Total Downloads](https://poser.pugx.org/swisscode/newt4dce/d/total)](https://packagist.org/packages/swisscode/newt4dce)
 [![Monthly Downloads](https://poser.pugx.org/swisscode/newt4dce/d/monthly)](https://packagist.org/packages/swisscode/newt4dce)
 
