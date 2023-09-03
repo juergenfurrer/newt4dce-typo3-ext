@@ -6,6 +6,11 @@
 Change log
 ==========
 
+Version 2.0.0
+-------------
+Add TYPO3 V12 support
+Drop TYPO3 V10 support
+
 Version 1.2.3
 -------------
 Fix error in PHP 8
