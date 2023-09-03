@@ -1,10 +1,10 @@
 {
-    "name": "infonique/newt4dce",
+    "name": "swisscode/newt4dce",
     "type": "typo3-cms-extension",
     "description": "Extension with the Newt-Provider for DCE",
     "homepage": "https://extensions.typo3.org/extension/newt4dce",
     "support": {
-        "docs": "https://docs.typo3.org/p/infonique/newt4dce/main/en-us/",
+        "docs": "https://docs.typo3.org/p/swisscode/newt4dce/main/en-us/",
         "issues": "https://github.com/juergenfurrer/newt4dce-typo3-ext/issues",
         "source": "https://github.com/juergenfurrer/newt4dce-typo3-ext"
     },
@@ -16,13 +16,13 @@
     ],
     "license": "GPL-2.0-or-later",
     "require": {
-        "typo3/cms-core": "^11.5 || ^10.4",
-        "infonique/newt": "^2.1.0",
-        "t3/dce": "^2.8.0"
+        "typo3/cms-core": "^11.5 || ^12.4",
+        "swisscode/newt": "^3.0.0",
+        "t3/dce": "^2.9.0"
     },
     "autoload": {
         "psr-4": {
-            "Infonique\\Newt4Dce\\": "Classes"
+            "Swisscode\\Newt4Dce\\": "Classes"
         }
     },
     "extra": {

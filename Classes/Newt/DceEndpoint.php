@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace Infonique\Newt4Dce\Newt;
+namespace Swisscode\Newt4Dce\Newt;
 
-use Infonique\Newt\NewtApi\EndpointInterface;
-use Infonique\Newt\NewtApi\EndpointOptionsInterface;
-use Infonique\Newt\NewtApi\Field;
-use Infonique\Newt\NewtApi\FieldItem;
-use Infonique\Newt\NewtApi\FieldType;
-use Infonique\Newt\NewtApi\FieldValidation;
-use Infonique\Newt\NewtApi\Item;
-use Infonique\Newt\NewtApi\ItemValue;
-use Infonique\Newt\NewtApi\MethodCreateModel;
-use Infonique\Newt\NewtApi\MethodDeleteModel;
-use Infonique\Newt\NewtApi\MethodListModel;
-use Infonique\Newt\NewtApi\MethodReadModel;
-use Infonique\Newt\NewtApi\MethodType;
-use Infonique\Newt\NewtApi\MethodUpdateModel;
+use Swisscode\Newt\NewtApi\EndpointInterface;
+use Swisscode\Newt\NewtApi\EndpointOptionsInterface;
+use Swisscode\Newt\NewtApi\Field;
+use Swisscode\Newt\NewtApi\FieldItem;
+use Swisscode\Newt\NewtApi\FieldType;
+use Swisscode\Newt\NewtApi\FieldValidation;
+use Swisscode\Newt\NewtApi\Item;
+use Swisscode\Newt\NewtApi\ItemValue;
+use Swisscode\Newt\NewtApi\MethodCreateModel;
+use Swisscode\Newt\NewtApi\MethodDeleteModel;
+use Swisscode\Newt\NewtApi\MethodListModel;
+use Swisscode\Newt\NewtApi\MethodReadModel;
+use Swisscode\Newt\NewtApi\MethodType;
+use Swisscode\Newt\NewtApi\MethodUpdateModel;
 use T3\Dce\Domain\Model\Dce;
 use T3\Dce\Domain\Model\DceField;
 use T3\Dce\Domain\Repository\DceRepository;
@@ -650,7 +650,7 @@ class DceEndpoint implements EndpointInterface, EndpointOptionsInterface
                                     }
                                 }
 
-                                if (isset($params[$paramImage]) && $params[$paramImage] instanceof \Infonique\Newt\Domain\Model\FileReference) {
+                                if (isset($params[$paramImage]) && $params[$paramImage] instanceof \Swisscode\Newt\Domain\Model\FileReference) {
                                     $imageRef = $params[$paramImage];
 
                                     if ($isNew) {

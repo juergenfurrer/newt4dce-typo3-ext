@@ -22,7 +22,7 @@ Newt4Dce
    Jürgen Furrer
 
 :Email:
-   juergen@infonique.ch
+   info@swisscode.sk
 
 :License:
    This extension documentation is published under the
