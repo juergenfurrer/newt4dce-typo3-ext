@@ -36,7 +36,6 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Configuration\ConfigurationManager;
 use TYPO3\CMS\Extbase\Configuration\ConfigurationManagerInterface;
 use TYPO3\CMS\Extbase\Persistence\Generic\PersistenceManager;
-use TYPO3\CMS\Extbase\Object\ObjectManager;
 use TYPO3\CMS\Extbase\Service\CacheService;
 
 class DceEndpoint implements EndpointInterface, EndpointOptionsInterface
@@ -55,8 +54,7 @@ class DceEndpoint implements EndpointInterface, EndpointOptionsInterface
 
     public function __construct(ConfigurationManager $configurationManager, PersistenceManager $persistenceManager)
     {
-        $objectManager = GeneralUtility::makeInstance(ObjectManager::class);
-        $this->dceRepository = $objectManager->get(DceRepository::class);
+        $this->dceRepository = GeneralUtility::makeInstance(DceRepository::class);
         $this->persistenceManager = $persistenceManager;
 
         $conf = $configurationManager->getConfiguration(ConfigurationManagerInterface::CONFIGURATION_TYPE_FULL_TYPOSCRIPT);
